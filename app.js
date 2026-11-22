@@ -108,7 +108,7 @@
           return '<text class="tray__spice" x="' + cx + '" y="' + (y0 + 15 + n * 11) + '">' + esc(l) + "</text>";
         }).join("");
         out += '<g class="tray__lid" data-lid="' + code + '" tabindex="0" role="button" aria-label="' +
-          esc(code + ", " + spice.name + ", " + fill + " percent full") + '">' +
+          esc(code + ", " + spice.name + ", " + "estimated " + fill + " percent full") + '">' +
           '<circle class="tray__sel" cx="' + cx + '" cy="' + cy + '" r="' + (r - .5) + '" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1"/>' +
           '<circle class="tray__disc" cx="' + cx + '" cy="' + cy + '" r="' + (r - 7) + '" fill="url(#alu)" stroke="#8f8f8b" stroke-width=".6"/>' +
           '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r - 3.5) + '" fill="none" stroke="#6d6c69" stroke-width="2.6"/>' +
@@ -134,8 +134,8 @@
       '<div class="tray-wrap">' + trayDiagram(c) + "</div>" +
       '<div class="meta"><div><div class="meta__k">Set in use since</div><div class="meta__v">' + fmtDate(state.since) + "</div></div>" +
       '<button class="btn btn--outline" data-action="change-set" aria-haspopup="dialog">Change set</button></div>' +
-      '<p class="section-label">Fill levels</p><div>' + rows + "</div>" +
-      '<p class="footnote">Fill levels are illustrative in this prototype.</p>';
+      '<p class="section-label">Estimated fill levels <span class="section-label__note">(based on your average ordering rate)</span></p><div>' + rows + "</div>" +
+      '<p class="footnote">SAAR does not measure what is inside each container. These are estimates based on how often you reorder, and are illustrative in this prototype.</p>';
   }
 
   function renderOrders() {
