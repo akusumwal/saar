@@ -112,7 +112,7 @@
           '<circle class="tray__sel" cx="' + cx + '" cy="' + cy + '" r="' + (r - .5) + '" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1"/>' +
           '<circle class="tray__disc" cx="' + cx + '" cy="' + cy + '" r="' + (r - 7) + '" fill="url(#alu)" stroke="#8f8f8b" stroke-width=".6"/>' +
           '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r - 3.5) + '" fill="none" stroke="#6d6c69" stroke-width="2.6"/>' +
-          '<circle class="tray__arc" cx="' + cx + '" cy="' + cy + '" r="' + (r - 3.5) + '" fill="none" stroke="' + (fill < LOW ? "#f0a52a" : "#e8e7e3") +
+          '<circle class="tray__arc" cx="' + cx + '" cy="' + cy + '" r="' + (r - 3.5) + '" fill="none" stroke="' + (fill < LOW ? "#c79a6b" : "#e8e7e3") +
           '" stroke-width="2.6" stroke-linecap="round" pathLength="100" stroke-dasharray="' + fill + ' 100" transform="rotate(-90 ' + cx + " " + cy + ')"/>' +
           '<text class="tray__code" x="' + cx + '" y="' + y0 + '">' + code + "</text>" + txt + "</g>";
       });
@@ -162,7 +162,7 @@
       ["The b3 drawer", "A 3 mm aluminium wire tray sits in the double-V of a bulthaup b3 drawer, holding six lidded containers, three on each side."]
     ];
     $("aboutPage").innerHTML =
-      '<p class="eyebrow">About</p><h2>A contemporary spice storage object</h2>' +
+      '<p class="eyebrow">About</p><h2>Contemporary Spice Storage System</h2>' +
       '<div class="story">' + story.map(function (s, i) {
         return "<article><span>" + (i + 1) + "</span><h3>" + esc(s[0]) + "</h3><p>" + esc(s[1]) + "</p></article>";
       }).join("") + "</div>" +
