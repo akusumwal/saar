@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SAAR | the essence of tradition</title>
+<meta name="description" content="SAAR, a contemporary spice storage object for the bulthaup b3 drawer. A design prototype.">
+<meta name="theme-color" content="#2f2e2c">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SAAR">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" as="image" href="assets/saar-poster.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app" id="app">
+  <main id="views">
+    <section class="view is-active" id="view-home" aria-label="Home">
+      <header class="hero">
+        <video id="heroVideo" class="hero__video" autoplay muted loop playsinline webkit-playsinline preload="auto"
+          poster="assets/saar-poster.jpg" disablepictureinpicture disableremoteplayback
+          aria-label="The SAAR spice tray with its six aluminium containers, moving from the worktop into a bulthaup drawer">
+          <source src="assets/saar-hero.mp4" type="video/mp4">
+        </video>
+        <div class="hero__shade"></div>
+        <div class="hero__text">
+          <h1>SAAR</h1>
+          <p>the essence of tradition</p>
+        </div>
+        <button class="hero__cue" id="heroCue" aria-label="Scroll to choose your cuisine">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M6 9.5l6 6 6-6"/></svg>
+        </button>
+      </header>
+      <div class="page" id="cuisines">
+        <p class="eyebrow">Refill</p>
+        <h2>Choose your cuisine</h2>
+        <p class="lede">Six lids, six roles. Pick a cuisine and every code keeps its place.</p>
+        <div class="cards" id="cuisineList"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-drawer" aria-label="In My Drawer"><div class="page page--top" id="drawerPage"></div></section>
+    <section class="view" id="view-orders" aria-label="Orders"><div class="page page--top" id="ordersPage"></div></section>
+    <section class="view" id="view-about" aria-label="About"><div class="page page--top" id="aboutPage"></div></section>
+  </main>
+
+  <nav class="tabbar" id="tabbar" aria-label="Main">
+    <button class="tab is-active" data-tab="home" aria-current="page">
+      <svg viewBox="0 0 24 24" class="icon"><path d="M4 11l8-6.5 8 6.5"/><path d="M6.2 9.6V19.5h11.6V9.6"/></svg><span>Home</span>
+    </button>
+    <button class="tab" data-tab="drawer">
+      <svg viewBox="0 0 24 24" class="icon"><rect x="3.5" y="5" width="17" height="14" rx="1.6"/><circle cx="8" cy="9.2" r="1.9"/><circle cx="12" cy="9.2" r="1.9"/><circle cx="16" cy="9.2" r="1.9"/><circle cx="8" cy="14.8" r="1.9"/><circle cx="12" cy="14.8" r="1.9"/><circle cx="16" cy="14.8" r="1.9"/></svg><span>In My Drawer</span>
+    </button>
+    <button class="tab" data-tab="orders">
+      <svg viewBox="0 0 24 24" class="icon"><path d="M6 3.8h12v16.4l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3z"/><path d="M9 8.5h6M9 12.5h6"/></svg><span>Orders</span>
+    </button>
+    <button class="tab" data-tab="about">
+      <svg viewBox="0 0 24 24" class="icon"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5.6" opacity=".45"/><path d="M12 11.2v3.4M12 8.9v.1"/></svg><span>About</span>
+    </button>
+  </nav>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-hidden="true" tabindex="-1">
+    <div class="sheet__grab" id="sheetGrab"><span></span></div>
+    <div class="sheet__content" id="sheetContent"></div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
