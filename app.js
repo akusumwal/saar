@@ -70,6 +70,22 @@
     });
   }
 
+  /* An order without a spices list is a full set. */
+  function orderCodes(o) {
+    var codes = Array.isArray(o.spices) ? CODES.filter(function (c) { return o.spices.indexOf(c) >= 0; }) : [];
+    return codes.length ? codes : CODES;
+  }
+  function spiceCount(n) { return n + (n === 1 ? " spice" : " spices"); }
+  function orderTitle(o) {
+    var c = cuisine(o.cuisineId), codes = orderCodes(o);
+    if (codes.length === CODES.length) return c.name + " set";
+    return c.name + " · " + (codes.length === 1 ? cap(c.spices[codes[0]].name) : spiceCount(codes.length));
+  }
+  function orderSpiceNames(o) {
+    var c = cuisine(o.cuisineId);
+    return cap(orderCodes(o).map(function (code) { return c.spices[code].name; }).join(", "));
+  }
+
   /* ---------- rendering ---------- */
   function renderCuisines() {
     $("cuisineList").innerHTML = D.cuisines.map(function (c) {
@@ -93,15 +109,14 @@
   }
 
   function trayDiagram(c) {
-    var radii = [46, 49, 52], gap = 4, W = 334, spineTop = 116, spineBottom = 124, h = 240;
-    var used = radii.reduce(function (a, r) { return a + r * 2; }, 0) + gap * 2;
-    var x = (W - used) / 2, xs = radii.map(function (r) { var cx = x + r; x += r * 2 + gap; return cx; });
+    var r = 49, gap = 4, W = 334, spineTop = 116, spineBottom = 124, h = 240;
+    var x0 = (W - (r * 6 + gap * 2)) / 2 + r, xs = [0, 1, 2].map(function (i) { return x0 + i * (r * 2 + gap); });
     var out = '<svg class="tray" viewBox="0 0 ' + W + " " + h + '" role="group" aria-label="Top-down view of the SAAR tray">' +
       '<defs><radialGradient id="alu" cx="42%" cy="34%" r="78%"><stop offset="0" stop-color="#f5f4f1"/><stop offset=".62" stop-color="#d9d9d5"/><stop offset="1" stop-color="#b9b9b5"/></radialGradient></defs>' +
       '<line x1="5" y1="120" x2="' + (W - 5) + '" y2="120" stroke="#b8b8b4" stroke-width="2.4" stroke-linecap="round"/>';
     D.trayLayout.forEach(function (row, rIdx) {
       row.forEach(function (code, i) {
-        var r = radii[i], cx = xs[i], cy = rIdx === 0 ? spineTop - r : spineBottom + r;
+        var cx = xs[i], cy = rIdx === 0 ? spineTop - r : spineBottom + r;
         var fill = state.fills[code], spice = c.spices[code], lines = wrapWords(cap(spice.name));
         var y0 = cy - 6 - (lines.length - 1) * 5;
         var txt = lines.map(function (l, n) {
@@ -140,18 +155,20 @@
 
   function renderOrders() {
     var list = allOrders(), last = list[0];
-    var lastC = cuisine(last.cuisineId);
+    var lastCodes = orderCodes(last);
     var tag = function (o) { return '<span class="demo-tag">' + (o.mine ? "Demo order" : "Sample data") + "</span>"; };
     $("ordersPage").innerHTML =
       '<p class="eyebrow">Orders</p><h2>Your refills</h2>' +
       '<p class="lede">Everything here is demo data. No real orders are placed.</p>' +
       '<div class="last-order"><div class="last-order__top"><span class="last-order__k">Last ordered</span>' + tag(last) + "</div>" +
       '<div class="last-order__date">' + fmtDate(last.date) + "</div>" +
-      '<div class="last-order__set">' + esc(lastC.name) + " set · " + esc(last.ref) + "</div>" +
-      '<div class="lid-row">' + CODES.map(lid).join("") + "</div></div>" +
+      '<div class="last-order__set">' + esc(orderTitle(last)) + " · " + esc(last.ref) + "</div>" +
+      '<div class="lid-row' + (lastCodes.length < CODES.length ? " lid-row--some" : "") + '">' + lastCodes.map(lid).join("") + "</div></div>" +
       '<p class="section-label">History</p><div>' + list.map(function (o) {
-        return '<div class="history-item"><div><div class="history-item__name">' + esc(cuisine(o.cuisineId).name) + '</div><div class="history-item__sub">' +
-          fmtDate(o.date) + " · " + esc(o.ref) + "</div></div>" + tag(o) + "</div>";
+        var some = orderCodes(o).length < CODES.length;
+        return '<div class="history-item"><div><div class="history-item__name">' + esc(cuisine(o.cuisineId).name) + "</div>" +
+          (some ? '<div class="history-item__sub">' + esc(orderSpiceNames(o)) + "</div>" : "") +
+          '<div class="history-item__sub">' + fmtDate(o.date) + " · " + esc(o.ref) + "</div></div>" + tag(o) + "</div>";
       }).join("") + "</div>";
   }
 
@@ -245,30 +262,56 @@
     $("view-" + tab).scrollTop = 0;
   }
 
+  var picks = [], picksCuisine = null;
+  function orderFoot() {
+    var n = picks.length;
+    if (n === 0 || n === CODES.length) {
+      return '<button class="btn btn--primary" data-action="order" data-id="' + esc(picksCuisine) + '">Order this set</button>';
+    }
+    return '<button class="btn btn--primary" data-action="order-picks" data-id="' + esc(picksCuisine) + '">Order ' + spiceCount(n) + "</button>" +
+      '<button class="btn btn--ghost" data-action="order" data-id="' + esc(picksCuisine) + '">Order full set instead</button>';
+  }
+  function addLabel(on) {
+    return on
+      ? '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Added'
+      : '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add';
+  }
+  function togglePick(btn) {
+    var code = btn.dataset.code, on = picks.indexOf(code) < 0;
+    picks = on ? picks.concat(code) : picks.filter(function (c) { return c !== code; });
+    btn.setAttribute("aria-pressed", String(on));
+    btn.innerHTML = addLabel(on);
+    $("orderFoot").innerHTML = orderFoot();
+  }
+
   function openCuisine(id) {
     var c = cuisine(id);
     if (!c) return;
+    picks = [];
+    picksCuisine = id;
     showSheet(
       '<div class="sheet__head"><p class="eyebrow" style="margin-bottom:2px">Spice set</p><h2>' + esc(c.name) + "</h2><p>" + esc(c.note) + "</p></div>" +
       '<div class="sheet__body">' + CODES.map(function (code) {
         var s = c.spices[code];
-        return '<div class="spice">' + lid(code) + '<div><div class="spice__role">' + esc(code) + " · " + esc(role(code).role) +
-          '</div><div class="spice__name">' + esc(cap(s.name)) + '</div><div class="spice__flavour">' + esc(s.flavour) + "</div></div></div>";
+        return '<div class="spice">' + lid(code) + '<div class="spice__text"><div class="spice__role">' + esc(code) + " · " + esc(role(code).role) +
+          '</div><div class="spice__name">' + esc(cap(s.name)) + '</div><div class="spice__flavour">' + esc(s.flavour) + "</div></div>" +
+          '<button class="spice__add" data-action="pick-spice" data-code="' + esc(code) + '" aria-pressed="false" aria-label="' + esc("Add " + s.name) + '">' + addLabel(false) + "</button></div>";
       }).join("") + "</div>" +
-      '<div class="sheet__foot"><button class="btn btn--primary" data-action="order" data-id="' + esc(c.id) + '">Order this set</button></div>',
+      '<div class="sheet__foot" id="orderFoot">' + orderFoot() + "</div>",
       c.name + " spice set");
   }
 
-  function placeDemoOrder(id) {
-    var c = cuisine(id), n = state.orders.length + 1;
+  function placeDemoOrder(id, codes) {
+    var n = state.orders.length + 1;
     var order = { ref: "DEMO-" + pad(n) + String(Date.now()).slice(-3), cuisineId: id, date: todayISO() };
+    if (codes && codes.length && codes.length < CODES.length) order.spices = codes.slice();
     state.orders.unshift(order);
     save();
     renderOrders();
     showSheet(
       '<div class="confirm"><span class="lid" aria-hidden="true"></span><h3>Thank you for exploring</h3>' +
       "<p>SAAR is a design prototype. No order has been placed and nothing will be charged or sent.</p>" +
-      '<p class="confirm__ref">Saved as a demo order<br>' + esc(c.name) + ' set · <span class="nowrap">' + esc(order.ref) + "</span></p></div>" +
+      '<p class="confirm__ref">Saved as a demo order<br>' + esc(orderTitle(order)) + ' · <span class="nowrap">' + esc(order.ref) + "</span></p></div>" +
       '<div class="sheet__foot sheet__foot--plain"><button class="btn btn--primary" data-action="view-orders">View in Orders</button>' +
       '<button class="btn btn--ghost" data-action="close">Keep exploring</button></div>',
       "Prototype notice");
@@ -332,6 +375,8 @@
     if (!a) return;
     var act = a.dataset.action;
     if (act === "order") placeDemoOrder(a.dataset.id);
+    else if (act === "order-picks") placeDemoOrder(a.dataset.id, picks);
+    else if (act === "pick-spice") togglePick(a);
     else if (act === "change-set") openChangeSet();
     else if (act === "pick-set") pickSet(a.dataset.id);
     else if (act === "view-orders") closeThenGo("orders");
