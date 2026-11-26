@@ -177,10 +177,13 @@
     var id = drawerCuisineId(), mixed = !id;
     var rows = CODES.map(function (code) {
       var f = state.fills[code], low = f < LOW, sc = slotCuisine(code);
-      return '<button class="fill-row" data-row="' + code + '">' + lid(code) +
+      return '<div class="fill-row" data-row="' + code + '">' + lid(code) +
         '<span class="fill-row__main"><span class="fill-row__top"><span class="fill-row__name">' + esc(cap(sc.spices[code].name)) +
         '</span><span class="fill-row__pct' + (low ? " is-low" : "") + '">' + (low ? "Low · " : "") + f + '%</span></span>' +
-        '<span class="spice__role">' + esc(role(code).role) + (mixed ? " · " + esc(sc.name) : "") + '</span><div class="bar"><i class="' + (low ? "is-low" : "") + '" style="width:' + f + '%"></i></div></span></button>';
+        '<span class="spice__role">' + esc(role(code).role) + (mixed ? " · " + esc(sc.name) : "") + "</span>" +
+        '<span class="slider" role="slider" tabindex="0" data-slider="' + code + '" aria-label="' + esc("Estimated fill level, " + sc.spices[code].name) +
+        '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + f + '" aria-valuetext="' + f + ' percent">' +
+        '<span class="bar"><i class="' + (low ? "is-low" : "") + '" style="width:' + f + '%"></i></span><span class="slider__thumb" style="left:' + f + '%"></span></span></span></div>';
     }).join("");
     $("drawerPage").innerHTML =
       '<p class="eyebrow">In my drawer</p><h2>' + esc(mixed ? "Mixed set" : cuisine(id).name + " set") + "</h2>" +
@@ -188,8 +191,8 @@
       '<div class="meta"><div><div class="meta__k">Set in use since</div><div class="meta__v">' + fmtDate(state.since) + "</div></div>" +
       '<button class="btn btn--outline" data-action="change-set" aria-haspopup="dialog">Change set</button></div>' +
       '<p class="section-label">Upcoming <span class="section-label__note">(ordered or chosen, not yet in your drawer)</span></p>' + renderUpcoming() +
-      '<p class="section-label">Estimated fill levels <span class="section-label__note">(based on your average ordering rate)</span></p><div>' + rows + "</div>" +
-      '<p class="footnote">SAAR does not measure what is inside each container. These are estimates based on how often you reorder, and are illustrative in this prototype.</p>';
+      '<p class="section-label">Estimated fill levels <span class="section-label__note">(based on your average ordering rate, drag to adjust)</span></p><div>' + rows + "</div>" +
+      '<p class="footnote">SAAR does not measure what is inside each container. These are estimates based on how often you reorder. If one looks wrong, drag its line to correct it and the tray above follows. Illustrative in this prototype.</p>';
   }
 
   function renderOrders() {
@@ -452,6 +455,75 @@
     });
   }
 
+  /* ---------- fill sliders: the estimate can be corrected by hand ---------- */
+  function setFill(code, v, persist) {
+    v = Math.max(0, Math.min(100, Math.round(v)));
+    state.fills[code] = v;
+    var page = $("drawerPage"), low = v < LOW;
+    var row = page.querySelector('[data-row="' + code + '"]');
+    if (row) {
+      var pct = row.querySelector(".fill-row__pct");
+      pct.textContent = (low ? "Low · " : "") + v + "%";
+      pct.classList.toggle("is-low", low);
+      var fill = row.querySelector(".bar i");
+      fill.style.width = v + "%";
+      fill.classList.toggle("is-low", low);
+      row.querySelector(".slider__thumb").style.left = v + "%";
+      var s = row.querySelector(".slider");
+      s.setAttribute("aria-valuenow", v);
+      s.setAttribute("aria-valuetext", v + " percent");
+    }
+    var g = page.querySelector('[data-lid="' + code + '"]');
+    if (g) {
+      var arc = g.querySelector(".tray__arc");
+      arc.setAttribute("stroke-dasharray", v + " 100");
+      arc.setAttribute("stroke", low ? "#c79a6b" : "#e8e7e3");
+      g.setAttribute("aria-label", code + ", " + slotCuisine(code).spices[code].name + ", estimated " + v + " percent full");
+    }
+    if (persist) save();
+  }
+
+  var drag = null;
+  function sliderValue(el, clientX) {
+    var r = el.getBoundingClientRect();
+    return (clientX - r.left) / r.width * 100;
+  }
+  document.addEventListener("pointerdown", function (e) {
+    var el = e.target.closest && e.target.closest("[data-slider]");
+    if (!el || e.button > 0) return;
+    drag = { el: el, code: el.dataset.slider, x: e.clientX, y: e.clientY, id: e.pointerId, moving: e.pointerType === "mouse" };
+    selectLid(drag.code);
+    if (drag.moving) start(e);
+  });
+  function start(e) {
+    drag.moving = true;
+    try { drag.el.setPointerCapture(drag.id); } catch (err) { /* not capturable */ }
+    drag.el.classList.add("is-dragging");
+    $("drawerPage").classList.add("is-adjusting");
+    setFill(drag.code, sliderValue(drag.el, e.clientX));
+  }
+  document.addEventListener("pointermove", function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (!drag.moving) {
+      var dx = Math.abs(e.clientX - drag.x), dy = Math.abs(e.clientY - drag.y);
+      if (dx > 6 && dx > dy) start(e);
+      else if (dy > 8) drag = null; /* a vertical scroll, not an adjustment */
+      return;
+    }
+    e.preventDefault();
+    setFill(drag.code, sliderValue(drag.el, e.clientX));
+  }, { passive: false });
+  function endSlide(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (e.type === "pointerup") setFill(drag.code, sliderValue(drag.el, e.clientX), true); /* a tap also sets the level */
+    else if (drag.moving) save();
+    drag.el.classList.remove("is-dragging");
+    $("drawerPage").classList.remove("is-adjusting");
+    drag = null;
+  }
+  document.addEventListener("pointerup", endSlide);
+  document.addEventListener("pointercancel", endSlide);
+
   /* ---------- events ---------- */
   document.addEventListener("click", function (e) {
     var t = e.target.closest ? e.target : e.target.parentNode;
@@ -480,6 +552,15 @@
   els.scrim.addEventListener("click", function () { hideSheet(); });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") hideSheet();
+    var sl = e.target.closest && e.target.closest("[data-slider]");
+    if (sl) {
+      var step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 10, PageDown: -10 }[e.key];
+      var code = sl.dataset.slider, cur = state.fills[code];
+      if (e.key === "Home") step = -cur;
+      if (e.key === "End") step = 100 - cur;
+      if (step !== undefined) { e.preventDefault(); selectLid(code); setFill(code, cur + step, true); }
+      return;
+    }
     if ((e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest("[data-lid]")) {
       e.preventDefault();
       selectLid(e.target.closest("[data-lid]").getAttribute("data-lid"));
