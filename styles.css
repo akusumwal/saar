@@ -199,6 +199,9 @@ h3 { font: 400 24px/1.15 var(--serif); }
 .code-row:last-child { border-bottom: 0; }
 .code-row b { font: 400 20px/1.15 var(--serif); display: block; }
 .code-row small { font-size: 13px; line-height: 1.35; color: var(--ink-2); display: block; }
+.film { margin: 4px -6px 0; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 14px; background: #2f2e2c url("assets/saar-explainer-poster.jpg") center / cover no-repeat; box-shadow: 0 0 0 1px var(--line); }
+.film__video { display: block; width: 100%; height: 100%; object-fit: cover; background: transparent; }
+.film__note { font-size: 12.5px; line-height: 1.45; color: var(--ink-3); margin-top: 10px; }
 .credit { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--line); font: italic 400 18px/1.35 var(--serif); color: var(--ink-2); }
 
 /* Tab bar */

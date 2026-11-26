@@ -188,7 +188,43 @@
       '<div class="codes">' + D.roles.map(function (r) {
         return '<div class="code-row">' + lid(r.code) + "<div><b>" + esc(r.role) + "</b><small>" + esc(r.meaning) + "</small></div></div>";
       }).join("") + "</div>" +
-      '<p class="credit">' + esc(D.credit) + "</p>";
+      '<p class="credit">' + esc(D.credit) + "</p>" +
+      '<p class="section-label">The film</p>' +
+      '<div class="film"><video class="film__video" id="filmVideo" src="assets/saar-explainer.mp4" poster="assets/saar-explainer-poster.jpg" ' +
+      'muted playsinline loop controls preload="none" aria-label="SAAR explainer film, 58 seconds, no sound"></video></div>' +
+      '<p class="film__note">58 seconds, no sound. Tap the video for controls or full screen.</p>';
+    setupFilm();
+  }
+
+  /* The film plays muted while it is on screen in About, unless the viewer paused it. */
+  var film = null, filmVisible = false, filmUserPaused = false, filmAutoPausedAt = 0;
+  function syncFilm() {
+    if (!film) return;
+    var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (filmVisible && currentTab === "about" && !document.hidden && !reduce && !filmUserPaused) {
+      film.muted = true;
+      var p = film.play();
+      if (p && p.catch) p.catch(function () { /* Low Power Mode: the poster stays, tap to play */ });
+    } else if (!film.paused) {
+      filmAutoPausedAt = Date.now();
+      film.pause();
+    }
+  }
+  function setupFilm() {
+    film = $("filmVideo");
+    if (!film) return;
+    film.muted = true;
+    film.addEventListener("play", function () { filmUserPaused = false; });
+    film.addEventListener("pause", function () {
+      if (Date.now() - filmAutoPausedAt > 400 && filmVisible && currentTab === "about") filmUserPaused = true;
+    });
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        filmVisible = entries[0].isIntersecting;
+        if (!filmVisible) filmUserPaused = false;
+        syncFilm();
+      }, { threshold: 0.5 }).observe(film);
+    }
   }
 
   function renderAll() { renderCuisines(); renderDrawer(); renderOrders(); }
@@ -204,6 +240,7 @@
       var p = v.play();
       if (p && p.catch) p.catch(function () { /* Low Power Mode: the poster stays visible */ });
     } else { v.pause(); }
+    syncFilm();
   }
   function setTab(tab, opts) {
     if (TABS.indexOf(tab) < 0) tab = "home";
