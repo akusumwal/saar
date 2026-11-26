@@ -192,7 +192,7 @@
       '<button class="btn btn--outline" data-action="change-set" aria-haspopup="dialog">Change set</button></div>' +
       '<p class="section-label">Upcoming <span class="section-label__note">(ordered or chosen, not yet in your drawer)</span></p>' + renderUpcoming() +
       '<p class="section-label">Estimated fill levels <span class="section-label__note">(based on your average ordering rate, drag to adjust)</span></p><div>' + rows + "</div>" +
-      '<p class="footnote footnote--italic">Estimated from how often you reorder. Drag a line to correct it.</p>';
+      '<p class="footnote footnote--italic">Estimated from how often you reorder. Drag the sliders to correct if needed.</p>';
   }
 
   function renderOrders() {
