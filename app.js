@@ -188,11 +188,11 @@
       '<div class="codes">' + D.roles.map(function (r) {
         return '<div class="code-row">' + lid(r.code) + "<div><b>" + esc(r.role) + "</b><small>" + esc(r.meaning) + "</small></div></div>";
       }).join("") + "</div>" +
-      '<p class="credit">' + esc(D.credit) + "</p>" +
       '<p class="section-label">The film</p>' +
       '<div class="film"><video class="film__video" id="filmVideo" src="assets/saar-explainer.mp4" poster="assets/saar-explainer-poster.jpg" ' +
       'muted playsinline loop controls preload="none" aria-label="SAAR explainer film, 58 seconds, no sound"></video></div>' +
-      '<p class="film__note">58 seconds, no sound. Tap the video for controls or full screen.</p>';
+      '<p class="film__note">58 seconds, no sound. Tap the video for controls or full screen.</p>' +
+      '<p class="credit">' + esc(D.credit) + "</p>";
     setupFilm();
   }
 
