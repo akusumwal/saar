@@ -192,7 +192,7 @@
       '<button class="btn btn--outline" data-action="change-set" aria-haspopup="dialog">Change set</button></div>' +
       '<p class="section-label">Upcoming <span class="section-label__note">(ordered or chosen, not yet in your drawer)</span></p>' + renderUpcoming() +
       '<p class="section-label">Estimated fill levels <span class="section-label__note">(based on your average ordering rate, drag to adjust)</span></p><div>' + rows + "</div>" +
-      '<p class="footnote">SAAR does not measure what is inside each container. These are estimates based on how often you reorder. If one looks wrong, drag its line to correct it and the tray above follows. Illustrative in this prototype.</p>';
+      '<p class="footnote footnote--italic">Estimated from how often you reorder. Drag a line to correct it.</p>';
   }
 
   function renderOrders() {
