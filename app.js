@@ -2,7 +2,7 @@
   "use strict";
 
   var D = window.SAAR_DATA;
-  var STORE_KEY = "saar.prototype.v1";
+  var STORE_KEY = "saar.prototype.v2";
   var TABS = ["home", "drawer", "orders", "about"];
   var CODES = D.roles.map(function (r) { return r.code; });
   var LOW = 25;
@@ -34,16 +34,21 @@
     return +p[2] + " " + m + " " + p[0];
   }
 
-  /* ---------- state (localStorage, always guarded) ---------- */
+  /* ---------- state ----------
+     Kept in sessionStorage only: it survives a refresh, and is gone once the tab is closed.
+     slots: which cuisine's spice is in each container. upcoming: ordered or chosen, not yet in the drawer. */
   function defaults() {
-    return { cuisineId: D.drawer.cuisineId, since: D.drawer.since, fills: Object.assign({}, D.drawer.fills), orders: [] };
+    var slots = {};
+    CODES.forEach(function (c) { slots[c] = D.drawer.cuisineId; });
+    return { slots: slots, since: D.drawer.since, fills: Object.assign({}, D.drawer.fills), orders: [], upcoming: [] };
   }
   function load() {
     var s = defaults();
+    try { localStorage.removeItem("saar.prototype.v1"); } catch (e) { /* older builds saved here permanently */ }
     try {
-      var saved = JSON.parse(localStorage.getItem(STORE_KEY));
+      var saved = JSON.parse(sessionStorage.getItem(STORE_KEY));
       if (saved && typeof saved === "object") {
-        if (cuisine(saved.cuisineId)) s.cuisineId = saved.cuisineId;
+        if (saved.slots) CODES.forEach(function (c) { if (cuisine(saved.slots[c])) s.slots[c] = saved.slots[c]; });
         if (/^\d{4}-\d{2}-\d{2}$/.test(saved.since)) s.since = saved.since;
         if (saved.fills) CODES.forEach(function (c) {
           var v = Number(saved.fills[c]);
@@ -52,14 +57,24 @@
         if (Array.isArray(saved.orders)) {
           s.orders = saved.orders.filter(function (o) { return o && cuisine(o.cuisineId) && o.date && o.ref; });
         }
+        if (Array.isArray(saved.upcoming)) {
+          s.upcoming = saved.upcoming.filter(function (u) { return u && cuisine(u.cuisineId) && u.id && u.date; });
+        }
       }
     } catch (e) { /* private mode or corrupt data: run from defaults */ }
     return s;
   }
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* keep working in memory */ }
+    try { sessionStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* keep working in memory */ }
   }
   var state = load();
+
+  function slotCuisine(code) { return cuisine(state.slots[code]); }
+  /* The cuisine filling every container, or null when the drawer is mixed. */
+  function drawerCuisineId() {
+    var id = state.slots[CODES[0]];
+    return CODES.every(function (c) { return state.slots[c] === id; }) ? id : null;
+  }
 
   function allOrders() {
     var mine = state.orders.map(function (o) { return Object.assign({ mine: true }, o); });
@@ -93,7 +108,7 @@
       for (var i = 0; i < 6; i++) dots += '<span class="lid lid--xs"></span>';
       return '<button class="card" data-cuisine="' + esc(c.id) + '" aria-haspopup="dialog"><span><h3>' + esc(c.name) + "</h3>" +
         '<p class="card__note">' + esc(c.note) + "</p>" +
-        (c.id === state.cuisineId ? '<span class="card__now">In your drawer</span>' : "") +
+        (c.id === drawerCuisineId() ? '<span class="card__now">In your drawer</span>' : "") +
         '</span><span class="mini-tray" aria-hidden="true">' + dots + "</span></button>";
     }).join("");
   }
@@ -108,7 +123,7 @@
     return lines.slice(0, 3);
   }
 
-  function trayDiagram(c) {
+  function trayDiagram() {
     var r = 49, gap = 4, W = 334, spineTop = 116, spineBottom = 124, h = 240;
     var x0 = (W - (r * 6 + gap * 2)) / 2 + r, xs = [0, 1, 2].map(function (i) { return x0 + i * (r * 2 + gap); });
     var out = '<svg class="tray" viewBox="0 0 ' + W + " " + h + '" role="group" aria-label="Top-down view of the SAAR tray">' +
@@ -117,7 +132,7 @@
     D.trayLayout.forEach(function (row, rIdx) {
       row.forEach(function (code, i) {
         var cx = xs[i], cy = rIdx === 0 ? spineTop - r : spineBottom + r;
-        var fill = state.fills[code], spice = c.spices[code], lines = wrapWords(cap(spice.name));
+        var fill = state.fills[code], spice = slotCuisine(code).spices[code], lines = wrapWords(cap(spice.name));
         var y0 = cy - 6 - (lines.length - 1) * 5;
         var txt = lines.map(function (l, n) {
           return '<text class="tray__spice" x="' + cx + '" y="' + (y0 + 15 + n * 11) + '">' + esc(l) + "</text>";
@@ -135,20 +150,44 @@
     return out + "</svg>";
   }
 
+  function miniTray(codes) {
+    return '<span class="mini-tray" aria-hidden="true">' + D.trayLayout.map(function (row) {
+      return row.map(function (code) {
+        return '<span class="lid lid--xs' + (codes.indexOf(code) < 0 ? " lid--ghost" : "") + '"></span>';
+      }).join("");
+    }).join("") + "</span>";
+  }
+
+  function renderUpcoming() {
+    if (!state.upcoming.length) {
+      return '<p class="up-empty">Nothing on its way. Spices you order, or a set you choose, wait here until you place them in your drawer.</p>';
+    }
+    return '<div class="upcoming">' + state.upcoming.map(function (u) {
+      var title = orderTitle(u);
+      return '<button class="up-card" data-action="swap-in" data-id="' + esc(u.id) + '" aria-label="' + esc("Place " + title + " in your drawer") + '">' +
+        miniTray(orderCodes(u)) +
+        '<span class="up-card__main"><span class="up-card__k">' + (u.ref ? "Ordered · " + fmtDate(u.date) : "Chosen next") + "</span>" +
+        '<span class="up-card__name">' + esc(title) + "</span>" +
+        '<span class="up-card__sub">Tap to place in your drawer</span></span>' +
+        '<svg class="icon up-card__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v12M6.5 11.5L12 17l5.5-5.5M5 20h14"/></svg></button>';
+    }).join("") + "</div>";
+  }
+
   function renderDrawer() {
-    var c = cuisine(state.cuisineId);
+    var id = drawerCuisineId(), mixed = !id;
     var rows = CODES.map(function (code) {
-      var f = state.fills[code], low = f < LOW;
+      var f = state.fills[code], low = f < LOW, sc = slotCuisine(code);
       return '<button class="fill-row" data-row="' + code + '">' + lid(code) +
-        '<span class="fill-row__main"><span class="fill-row__top"><span class="fill-row__name">' + esc(cap(c.spices[code].name)) +
+        '<span class="fill-row__main"><span class="fill-row__top"><span class="fill-row__name">' + esc(cap(sc.spices[code].name)) +
         '</span><span class="fill-row__pct' + (low ? " is-low" : "") + '">' + (low ? "Low · " : "") + f + '%</span></span>' +
-        '<span class="spice__role">' + esc(role(code).role) + '</span><div class="bar"><i class="' + (low ? "is-low" : "") + '" style="width:' + f + '%"></i></div></span></button>';
+        '<span class="spice__role">' + esc(role(code).role) + (mixed ? " · " + esc(sc.name) : "") + '</span><div class="bar"><i class="' + (low ? "is-low" : "") + '" style="width:' + f + '%"></i></div></span></button>';
     }).join("");
     $("drawerPage").innerHTML =
-      '<p class="eyebrow">In my drawer</p><h2>' + esc(c.name) + " set</h2>" +
-      '<div class="tray-wrap">' + trayDiagram(c) + "</div>" +
+      '<p class="eyebrow">In my drawer</p><h2>' + esc(mixed ? "Mixed set" : cuisine(id).name + " set") + "</h2>" +
+      '<div class="tray-wrap">' + trayDiagram() + "</div>" +
       '<div class="meta"><div><div class="meta__k">Set in use since</div><div class="meta__v">' + fmtDate(state.since) + "</div></div>" +
       '<button class="btn btn--outline" data-action="change-set" aria-haspopup="dialog">Change set</button></div>' +
+      '<p class="section-label">Upcoming <span class="section-label__note">(ordered or chosen, not yet in your drawer)</span></p>' + renderUpcoming() +
       '<p class="section-label">Estimated fill levels <span class="section-label__note">(based on your average ordering rate)</span></p><div>' + rows + "</div>" +
       '<p class="footnote">SAAR does not measure what is inside each container. These are estimates based on how often you reorder, and are illustrative in this prototype.</p>';
   }
@@ -343,22 +382,25 @@
     var order = { ref: "DEMO-" + pad(n) + String(Date.now()).slice(-3), cuisineId: id, date: todayISO() };
     if (codes && codes.length && codes.length < CODES.length) order.spices = codes.slice();
     state.orders.unshift(order);
+    state.upcoming.unshift(Object.assign({ id: order.ref }, order));
     save();
     renderOrders();
+    renderDrawer();
     showSheet(
       '<div class="confirm"><span class="lid" aria-hidden="true"></span><h3>Thank you for exploring</h3>' +
       "<p>SAAR is a design prototype. No order has been placed and nothing will be charged or sent.</p>" +
-      '<p class="confirm__ref">Saved as a demo order<br>' + esc(orderTitle(order)) + ' · <span class="nowrap">' + esc(order.ref) + "</span></p></div>" +
-      '<div class="sheet__foot sheet__foot--plain"><button class="btn btn--primary" data-action="view-orders">View in Orders</button>' +
+      '<p class="confirm__ref">Saved as a demo order<br>' + esc(orderTitle(order)) + ' · <span class="nowrap">' + esc(order.ref) + "</span><br>It is waiting under Upcoming in In My Drawer.</p></div>" +
+      '<div class="sheet__foot sheet__foot--plain"><button class="btn btn--primary" data-action="view-drawer">See it in my drawer</button>' +
+      '<button class="btn btn--ghost" data-action="view-orders">View in Orders</button>' +
       '<button class="btn btn--ghost" data-action="close">Keep exploring</button></div>',
       "Prototype notice");
   }
 
   function openChangeSet() {
     showSheet(
-      '<div class="sheet__head"><h2>Change set</h2><p>Choose what is in your drawer now.</p></div>' +
+      '<div class="sheet__head"><h2>Change set</h2><p>Choose your next set. It waits under Upcoming until you place it in your drawer.</p></div>' +
       '<div class="sheet__body">' + D.cuisines.map(function (c) {
-        var on = c.id === state.cuisineId;
+        var on = c.id === drawerCuisineId();
         return '<button class="choice" data-action="pick-set" data-id="' + esc(c.id) + '"' + (on ? ' aria-current="true"' : "") + '><span><div class="choice__name">' + esc(c.name) +
           '</div><div class="choice__sub">' + esc(c.note) + "</div></span>" +
           (on ? '<svg class="icon choice__tick" viewBox="0 0 24 24" aria-label="Current set"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : "") + "</button>";
@@ -366,16 +408,31 @@
       "Change set");
   }
 
+  /* Choosing a set does not change the drawer; it queues the set under Upcoming. */
   function pickSet(id) {
-    if (id !== state.cuisineId) {
-      state.cuisineId = id;
-      state.since = todayISO();
-      CODES.forEach(function (c) { state.fills[c] = 100; });
+    var queued = state.upcoming.some(function (u) { return !u.ref && u.cuisineId === id; });
+    if (!queued) {
+      state.upcoming.unshift({ id: "NEXT-" + Date.now(), cuisineId: id, date: todayISO() });
       save();
-      renderAll();
-      toast(cuisine(id).name + " set is now in your drawer");
+      renderDrawer();
     }
+    toast(cuisine(id).name + " set is waiting under Upcoming");
     hideSheet();
+  }
+
+  /* Placing an upcoming refill in the drawer: those containers are now full. */
+  function swapIn(uid) {
+    var u = state.upcoming.filter(function (x) { return x.id === uid; })[0];
+    if (!u) return;
+    var codes = orderCodes(u);
+    codes.forEach(function (c) { state.slots[c] = u.cuisineId; state.fills[c] = 100; });
+    if (codes.length === CODES.length) state.since = todayISO();
+    state.upcoming = state.upcoming.filter(function (x) { return x.id !== uid; });
+    save();
+    renderCuisines();
+    renderDrawer();
+    $("view-drawer").scrollTo({ top: 0, behavior: "smooth" });
+    toast(orderTitle(u) + " is now in your drawer");
   }
 
   var toastTimer;
@@ -417,6 +474,8 @@
     else if (act === "change-set") openChangeSet();
     else if (act === "pick-set") pickSet(a.dataset.id);
     else if (act === "view-orders") closeThenGo("orders");
+    else if (act === "view-drawer") closeThenGo("drawer");
+    else if (act === "swap-in") swapIn(a.dataset.id);
     else if (act === "close") hideSheet();
   });
   els.scrim.addEventListener("click", function () { hideSheet(); });
