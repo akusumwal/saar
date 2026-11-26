@@ -390,9 +390,8 @@
       '<div class="confirm"><span class="lid" aria-hidden="true"></span><h3>Thank you for exploring</h3>' +
       "<p>SAAR is a design prototype. No order has been placed and nothing will be charged or sent.</p>" +
       '<p class="confirm__ref">Saved as a demo order<br>' + esc(orderTitle(order)) + ' · <span class="nowrap">' + esc(order.ref) + "</span><br>It is waiting under Upcoming in In My Drawer.</p></div>" +
-      '<div class="sheet__foot sheet__foot--plain"><button class="btn btn--primary" data-action="view-drawer">See it in my drawer</button>' +
-      '<button class="btn btn--ghost" data-action="view-orders">View in Orders</button>' +
-      '<button class="btn btn--ghost" data-action="close">Keep exploring</button></div>',
+      '<div class="sheet__foot sheet__foot--plain sheet__foot--stack"><button class="btn btn--wood" data-action="view-orders">View in Orders</button>' +
+      '<button class="btn btn--primary" data-action="view-drawer">See it in my drawer</button></div>',
       "Prototype notice");
   }
 

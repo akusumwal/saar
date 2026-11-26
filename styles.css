@@ -117,6 +117,9 @@ h3 { font: 400 24px/1.15 var(--serif); }
 .btn:active { transform: scale(.985); }
 .btn--primary { background: var(--ink); color: #fbf8f3; }
 .btn--primary:active { background: #454441; }
+.btn--wood { background: var(--wood-ink); color: #fbf8f3; }
+.btn--wood:active { background: #5d3d23; }
+.sheet__foot--stack { display: grid; gap: 10px; }
 .btn--ghost { min-height: 46px; margin-top: 4px; color: var(--ink-2); font-weight: 400; }
 .btn--outline { border: 1px solid var(--ink); }
 .btn--outline:active { background: #ece8e0; }
